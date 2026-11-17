@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <!-- 文字化けを防ぐ設定(日本語を使うので必須) -->
+  <meta charset="UTF-8">
+  <!-- スマホでも見やすくする設定 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>kagawa92 | AWS ECS Portfolio</title>
+
+  <!-- ===== 見た目の設定(CSS)。ここは触らなくてOK ===== -->
+  <style>
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      line-height: 1.8;
+      color: #222;
+      background: #f5f7fa;
+    }
+    header {
+      background: #232f3e;
+      color: #fff;
+      padding: 48px 20px;
+      text-align: center;
+    }
+    header h1 { margin: 0; font-size: 2rem; }
+    header p  { margin: 8px 0 0; color: #ff9900; }
+    main {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 24px 20px 48px;
+    }
+    section {
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin-top: 24px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+    h2 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      border-left: 4px solid #ff9900;
+      padding-left: 10px;
+    }
+    pre {
+      background: #f0f2f5;
+      padding: 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      line-height: 1.5;
+    }
+    a { color: #0073bb; }
+    footer {
+      text-align: center;
+      font-size: 0.85rem;
+      color: #777;
+      padding-bottom: 32px;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- ===== ① 一番上の帯 ===== -->
+  <header>
+    <h1>kagawa92</h1>
+    <p>ビル管理からクラウド運用へ</p>
+  </header>
+
+  <main>
+    <!-- ===== ② 自己紹介 ===== -->
+    <section>
+      <h2>自己紹介</h2>
+      <p><p>新卒でビル管理会社に入社し、建物という「物理インフラ」の管理に携わりました。<br>
+   その経験からITインフラに興味を持ち、現在は職業訓練校のクラウド・コンテナのコースで学んでいます。<br>
+   2026年11月にAWS SAAを取得し、AWSを使ったインフラ運用の仕事を目指して勉強を続けています。
+</p>
+      </p>
+    </section>
+
+    <!-- ===== ③ 資格・スキル ===== -->
+    <section>
+      <h2>資格・スキル</h2>
+      <ul>
+        <li>AWS Certified Solutions Architect – Associate(2026年11月取得)</li>
+        <li>Linux(職業訓練校で学習)</li>
+        <li>Docker(職業訓練校で学習)</li>
+        <li>AWSのコンソール画面での構築、運用(職業訓練校で学習)</li>
+        <li>C言語(放送大学で学習)</li>
+        <!-- 増やしたいときは <li>〜</li> の行をコピーして増やす -->
+      </ul>
+    </section>
+
+    <!-- ===== ④ このページを動かしている仕組み ===== -->
+    <section>
+      <h2>このページの構成</h2>
+      <p>このページは、AWS上に次の構成で公開しています。すべてCloudFormationで作成しています。</p>
+<pre>
+インターネット
+   │
+  ALB(ロードバランサー)
+   │
+  ECS Fargate(コンテナ ×2、2つのAZに分散)
+   │
+  nginx + このHTML(自作のDockerイメージ)
+</pre>
+      <p>【ここに工夫した点を1〜2行。例:コストを抑えるためNATゲートウェイを使わず、セキュリティグループでALBからの通信だけを許可した】</p>
+    </section>
+
+    <!-- ===== ⑤ リンク ===== -->
+    <section>
+      <h2>リンク</h2>
+      <ul>
+        <li>GitHub:<a href="https://github.com/kagawa92">github.com/kagawa92</a></li>
+        <!-- 記事を書いたらここに追加。例:
+        <li>Zenn:<a href="https://zenn.dev/ユーザー名">記事のタイトル</a></li>
+        -->
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    &copy; 2026 kagawa92
+  </footer>
+</body>
+</html>
