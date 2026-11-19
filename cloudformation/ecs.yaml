@@ -1,0 +1,136 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Portfolio application layer - ALB and ECS Fargate service (2 tasks across 2 AZs).
+  Uses the network created by the portfolio-vpc stack (via Export/ImportValue).
+
+Parameters:
+  RepositoryName:
+    Type: String
+    Default: portfolio-web
+    Description: ECR repository name
+  ImageTag:
+    Type: String
+    Default: latest
+    Description: Image tag to deploy
+  DesiredCount:
+    Type: Number
+    Default: 2
+    Description: Number of tasks (2 = one per AZ)
+
+Resources:
+  # ========== 1. ALB(入口) ==========
+  Alb:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: application
+      Scheme: internet-facing
+      Subnets:
+        - !ImportValue portfolio-vpc-PublicSubnetA
+        - !ImportValue portfolio-vpc-PublicSubnetB
+      SecurityGroups:
+        - !ImportValue portfolio-vpc-AlbSecurityGroup
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !ImportValue portfolio-vpc-VpcId
+      TargetType: ip
+      Protocol: HTTP
+      Port: 80
+      HealthCheckPath: /
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: "30"
+
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref Alb
+      Protocol: HTTP
+      Port: 80
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+  # ========== 2. ECS(コンテナを動かす) ==========
+  Cluster:
+    Type: AWS::ECS::Cluster
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: portfolio-web
+      RequiresCompatibilities:
+        - FARGATE
+      NetworkMode: awsvpc
+      Cpu: "256"
+      Memory: "512"
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      ContainerDefinitions:
+        - Name: web
+          Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${RepositoryName}:${ImageTag}
+          Essential: true
+          PortMappings:
+            - ContainerPort: 80
+              Protocol: tcp
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: web
+
+  Service:
+    Type: AWS::ECS::Service
+    DependsOn: Listener
+    Properties:
+      Cluster: !Ref Cluster
+      LaunchType: FARGATE
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: !Ref DesiredCount
+      HealthCheckGracePeriodSeconds: 30
+      DeploymentConfiguration:
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !ImportValue portfolio-vpc-PublicSubnetA
+            - !ImportValue portfolio-vpc-PublicSubnetB
+          SecurityGroups:
+            - !ImportValue portfolio-vpc-EcsTaskSecurityGroup
+      LoadBalancers:
+        - ContainerName: web
+          ContainerPort: 80
+          TargetGroupArn: !Ref TargetGroup
+
+  # ========== 3. 裏方(権限とログ) ==========
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/portfolio-web
+      RetentionInDays: 7
+
+Outputs:
+  AlbUrl:
+    Description: Open this URL in a browser
+    Value: !Sub http://${Alb.DNSName}
+  ClusterName:
+    Value: !Ref Cluster
+  ServiceName:
+    Value: !GetAtt Service.Name
