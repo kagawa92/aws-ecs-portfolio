@@ -1,6 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  Portfolio application layer - ALB and ECS Fargate service (2 tasks across 2 AZs).
+  Portfolio application layer - ALB and ECS Fargate service (2 tasks across 2 AZs),
+  with CloudWatch alarms that notify the SNS topic of the portfolio-alerts stack.
   Uses the network created by the portfolio-vpc stack (via Export/ImportValue).
 
 Parameters:
@@ -125,6 +126,54 @@ Resources:
     Properties:
       LogGroupName: /ecs/portfolio-web
       RetentionInDays: 7
+
+  # ========== 4. 監視(CloudWatchアラーム) ==========
+  UnhealthyTasksAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${AWS::StackName}-healthy-tasks-below-2
+      AlarmDescription: Healthy tasks behind the ALB dropped below 2
+      Namespace: AWS/ApplicationELB
+      MetricName: HealthyHostCount
+      Dimensions:
+        - Name: TargetGroup
+          Value: !GetAtt TargetGroup.TargetGroupFullName
+        - Name: LoadBalancer
+          Value: !GetAtt Alb.LoadBalancerFullName
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 2
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: missing
+      AlarmActions:
+        - !ImportValue portfolio-alerts-AlarmTopicArn
+      OKActions:
+        - !ImportValue portfolio-alerts-AlarmTopicArn
+
+  HighCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${AWS::StackName}-cpu-over-70
+      AlarmDescription: Average CPU utilization of the ECS service is over 70 percent
+      Namespace: AWS/ECS
+      MetricName: CPUUtilization
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref Cluster
+        - Name: ServiceName
+          Value: !GetAtt Service.Name
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      Threshold: 70
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: missing
+      AlarmActions:
+        - !ImportValue portfolio-alerts-AlarmTopicArn
+      OKActions:
+        - !ImportValue portfolio-alerts-AlarmTopicArn
 
 Outputs:
   AlbUrl:

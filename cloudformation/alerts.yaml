@@ -1,0 +1,29 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Portfolio alert layer - SNS topic for CloudWatch alarm notifications.
+  Kept permanently so the email subscription does not need to be confirmed again
+  every time the ECS stack is recreated.
+
+Parameters:
+  NotificationEmail:
+    Type: String
+    Description: Email address that receives alarm notifications (not stored in the repository)
+
+Resources:
+  AlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: portfolio-alarm
+
+  AlarmEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref AlarmTopic
+      Protocol: email
+      Endpoint: !Ref NotificationEmail
+
+Outputs:
+  AlarmTopicArn:
+    Value: !Ref AlarmTopic
+    Export:
+      Name: !Sub ${AWS::StackName}-AlarmTopicArn
